@@ -5,19 +5,19 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-def get_llm_config() -> Dict[str, Any]:
-    return {
-        "config_list": [
-            {
-                "model": os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile"),
-                "api_key": os.getenv("GROQ_API_KEY"),
-                "base_url": "https://api.groq.com/openai/v1",
-                "api_type": "openai"
-            }
-        ],
-        "temperature": 0.7,
-        "timeout": 120,
-    }
+# def get_llm_config() -> Dict[str, Any]:
+#     return {
+#         "config_list": [
+#             {
+#                 "model": os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile"),
+#                 "api_key": os.getenv("GROQ_API_KEY"),
+#                 "base_url": "https://api.groq.com/openai/v1",
+#                 "api_type": "openai"
+#             }
+#         ],
+#         "temperature": 0.7,
+#         "timeout": 120,
+#     }
     
 # def get_llm_config() -> Dict[str, Any]:
 #     return {
@@ -33,26 +33,26 @@ def get_llm_config() -> Dict[str, Any]:
 #         "timeout": 120,
 #     }
     
-# def get_llm_config() -> Dict[str, Any]:
-#     api_key = os.getenv("OPENROUTER_API_KEY")
-#     model = os.getenv("OPENROUTER_MODEL", "meta-llama/llama-3.2-3b-instruct")
+def get_llm_config() -> Dict[str, Any]:
+    api_key = os.getenv("OPENROUTER_API_KEY")
+    model = os.getenv("OPENROUTER_MODEL", "meta-llama/llama-3.2-3b-instruct")
 
-#     return {
-#         "config_list": [
-#             {
-#                 "model": model,
-#                 "api_key": api_key,
-#                 "base_url": "https://openrouter.ai/api/v1",
-#                 "api_type": "openai",
-#                 "default_headers": {
-#                     "HTTP-Referer": "http://localhost",
-#                     "X-Title": "Saksham"
-#                 }
-#             }
-#         ],
-#         "temperature": 0.7,
-#         "timeout": 120,
-#     }
+    return {
+        "config_list": [
+            {
+                "model": model,
+                "api_key": api_key,
+                "base_url": "https://openrouter.ai/api/v1",
+                "api_type": "openai",
+                "default_headers": {
+                    "HTTP-Referer": "http://localhost",
+                    "X-Title": "Saksham"
+                }
+            }
+        ],
+        "temperature": 0.7,
+        "timeout": 120,
+    }
 
 def build_agent(
     name: str,

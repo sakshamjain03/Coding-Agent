@@ -1,10 +1,21 @@
-# DataEconomy – Multi-Agent Coding Framework
+# Multi-Agent Coding Framework
 
 A fully automated multi-agent system that converts natural-language software specifications into complete working projects using a deterministic agent pipeline.
 
 The framework supports local LLMs via **Ollama** and cloud LLMs via **OpenRouter** and **Groq**.
 
 ---
+
+## 🚀 Project Status
+
+- ✅ Stable (Deterministic sequential workflow)
+- 🧪 Tested (Auto-generated unit tests executed)
+- 🎓 Educational Project (Learning-focused, non-commercial)
+- ☁️ Hosted on Streamlit Community Cloud (Free Tier)
+- ⚠️ Subject to free-tier LLM rate and token limits
+
+**Author:** Saksham Jain
+
 
 ## Features
 
@@ -16,6 +27,16 @@ The framework supports local LLMs via **Ollama** and cloud LLMs via **OpenRouter
 - **Streamlit UI Interface:** Easy-to-use frontend  
 - **Deterministic Bounded Review Loop:** Prevents infinite loops during code review  
 - **Safe Termination:** Includes runaway protection mechanisms  
+
+## Live Demo
+
+This project is hosted on **Streamlit Community Cloud (Free Tier)**.
+
+🔗 **Live Application:**  
+> [Coding Agent Team by Saksham Jain](https://coding-agent-by-saksham.streamlit.app/)
+
+> ⚠️ **Note:**  
+> This deployment uses free-tier LLM access. If token or rate limits are exceeded, the workflow may terminate early with a friendly error message.
 
 ---
 ## Installation
@@ -115,6 +136,55 @@ Predictable cost and performance
 Clean separation of responsibilities per agent
 This design mirrors real-world software development pipelines and ensures the system produces consistent, review-validated, deployment-ready outputs.
 
+## Agents Overview
+
+Each agent represents a real-world software development role. Agents operate **sequentially**, not autonomously, to ensure correctness.
+
+### 🧭 Controller Agent
+- Entry point of the system
+- Interprets the user request
+- Enforces workflow rules and file-output contracts
+- Orchestrates downstream agents
+
+### 📋 Requirements Agent
+- Converts natural-language input into structured requirements
+- Outputs `requirements.md`
+- Defines functional, non-functional, and edge-case requirements
+
+### 💻 Coding Agent
+- Generates production-ready Python code
+- Outputs `main.py`
+- Uses only built-in Python libraries
+- Implements all approved requirements
+
+### 🔍 Review Agent
+- Reviews code for correctness, security, and efficiency
+- Either:
+  - **APPROVES** the code, or
+  - Issues **FIX_REQUIRED**, triggering a controlled re-iteration
+- Enforces dependency and safety constraints
+
+### 📄 Documentation Agent
+- Generates comprehensive project documentation
+- Outputs `README.md`
+- Explains architecture, usage, and code structure
+
+### 🧪 QA Agent
+- Generates unit tests
+- Outputs `test_main.py`
+- Tests real code paths, edge cases, and error handling
+- Tests are executed automatically
+
+### 🚀 Deployment Agent
+- Generates deployment artifacts
+- Outputs `Dockerfile` and `run.sh`
+- Keeps configuration minimal and portable
+
+### 🎨 UI Agent
+- Generates a Streamlit UI
+- Outputs `app_ui.py`
+- Provides a simple interface to interact with the generated project
+
 Architecture
 ```
 graph TD
@@ -126,4 +196,54 @@ graph TD
     E --> F[QA Agent]
     F --> G[Deployment Agent]
     G --> H[UI Agent]
-    ```
+```
+
+## File Structure
+```
+project-root/
+├── app.py # Main Streamlit application
+├── workflow.py # Sequential multi-agent orchestrator
+├── agents.py # Agent definitions and LLM configuration
+├── utils/
+│ ├── logger.py # Centralized logging
+│ └── test_executor.py # Automated test runner
+├── workspace/ # Generated project artifacts
+│ ├── requirements.md
+│ ├── main.py
+│ ├── test_main.py
+│ ├── README.md
+│ ├── Dockerfile
+│ └── app_ui.py
+├── requirements.txt
+├── .env.example
+└── README.md
+```
+
+- Uses free-tier LLM access (rate/token limits apply)
+- Long prompts may exceed token limits
+- Not intended for production deployment
+- Generated code quality depends on LLM output
+- Streamlit Cloud limits execution time and resources
+
+If a token limit is exceeded, the system will:
+- Stop execution safely
+- Display a clear error message
+- Preserve all already-generated artifacts
+
+## Project Intent
+This project was created by **Saksham Jain** as a **learning and exploration exercise** in:
+- Multi-agent system design
+- LLM orchestration
+- Deterministic AI workflows
+- Tooling around automated software generation
+
+This project is **not intended for monetization** or commercial use.
+
+---
+
+## Acknowledgements
+- AutoGen (Microsoft)
+- Streamlit
+- Ollama
+- OpenRouter
+- Groq

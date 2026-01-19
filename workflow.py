@@ -99,7 +99,6 @@ class WorkflowOrchestrator:
             })
             
             pipeline = [
-                "Controller_agent",
                 "Requirements_Agent",
                 "coding_agent",
                 "review_agent",
@@ -109,7 +108,6 @@ class WorkflowOrchestrator:
                 "UI_agent",
             ]
 
-            last_agent = None
             i = 0
             while i < len(pipeline):
                 if i > 40:
@@ -117,7 +115,9 @@ class WorkflowOrchestrator:
                 role = pipeline[i]
 
                 agent = self.agents[role]
-                logger.info(f"Executing: {agent.name}")
+                logger.info(f"Executing: {agent.name}")                
+                if self.progress_callback:
+                    self.progress_callback(role, "running")
                 chat_history = [
                     {"role": m.get("role", "assistant"), "content": m.get("content", "")}
                     for m in groupchat.messages
@@ -139,11 +139,8 @@ class WorkflowOrchestrator:
                     self.review_iteration_count += 1
                     if self.review_iteration_count < self.max_review_iterations:
                         pipeline.insert(i + 1, "coding_agent")
-                        last_agent = None   # reset context so coding_agent gets clean task
                     else:
                         logger.warning("Review limit reached — forcing approval")
-
-                last_agent = agent
                 i += 1
 
             
