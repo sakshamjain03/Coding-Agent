@@ -1,10 +1,10 @@
 import os
 os.environ["PYTHONDONTWRITEBYTECODE"] = "1"
-
+import zipfile
+import io
 import streamlit as st
 from pathlib import Path
 from typing import Dict, Any
-
 from agents import create_all_agents
 from workflow import run_workflow
 from utils.logger import setup_logger
@@ -56,19 +56,34 @@ def is_token_limit_error(msg: str) -> bool:
             "rate_limit_exceeded",
         ]
     )
+    
+def create_workspace_zip() -> bytes:
+    """
+    Create an in-memory ZIP of the workspace directory.
+    Returns bytes suitable for st.download_button.
+    """
+    zip_buffer = io.BytesIO()
+
+    with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zipf:
+        for root, _, files in os.walk(WORKSPACE_DIR):
+            for file in files:
+                file_path = os.path.join(root, file)
+                arcname = os.path.relpath(file_path, WORKSPACE_DIR)
+                zipf.write(file_path, arcname)
+
+    zip_buffer.seek(0)
+    return zip_buffer.read()
 
 def display_test_results(test_results: Dict[str, Any]):
     if not test_results:
         st.info("No test results available.")
         return
 
-    st.subheader("🧪 Test Execution Results")
+    st.subheader("Test Execution Results")
 
     status = test_results.get("status", "unknown")
     if status in ["passed", "success"]:
         st.success("All tests executed successfully.")
-    else:
-        st.error("Some tests failed or encountered errors.")
 
     c1, c2, c3, c4 = st.columns(4)
     c1.metric("Total Tests", test_results.get("total_tests", 0))
@@ -90,11 +105,11 @@ def display_workspace_artifacts():
     files = list(Path(WORKSPACE_DIR).glob("*"))
 
     groups = {
-        "📄 Core Code": ["main.py"],
-        "🧪 Tests": ["test_main.py"],
-        "📘 Documentation": ["README.md", "requirements.md"],
-        "🚀 Deployment": ["Dockerfile", "run.sh"],
-        "🎨 UI": ["app_ui.py"],
+        "Core Code": ["main.py"],
+        "Tests": ["test_main.py"],
+        "Documentation": ["README.md", "requirements.md"],
+        "Deployment": ["Dockerfile", "run.sh"],
+        "UI": ["app_ui.py"],
     }
 
     for title, names in groups.items():
@@ -110,7 +125,7 @@ def display_workspace_artifacts():
 def launch_generated_ui_section():
     ui_path = os.path.join(WORKSPACE_DIR, "app_ui.py")
 
-    st.subheader("🎨 Preview the Generated Application")
+    st.subheader("Preview the Generated Application")
 
     if not os.path.exists(ui_path):
         st.info("No UI was generated for this project.")
@@ -134,11 +149,11 @@ You can run this UI **locally** using the command below.
 
 # ================== SIDEBAR ==================
 with st.sidebar:
-    st.title("⚙️ Controls")
+    st.title("Controls")
 
     st.markdown(
         """
-🧹 **Workspace Reset (Recommended)**
+**Workspace Reset (Recommended)**
 
 To avoid file conflicts:
 - Clear workspace **before starting**
@@ -146,8 +161,41 @@ To avoid file conflicts:
 """
     )
 
-    if st.button("🗑️ Clear Workspace"):
+    if st.button("Clear Workspace"):
         clear_workspace()
+        
+        
+    st.divider()
+    st.subheader("🔐 Bring Your Own API Key (Optional)")
+
+    st.caption(
+        "If provided, your key will be used first. "
+        "Otherwise, the app falls back to the demo keys."
+    )
+
+    user_groq_key = st.text_input(
+        "Groq API Key",
+        type="password",
+        placeholder="gsk_...",
+    )
+
+    user_openrouter_key = st.text_input(
+        "OpenRouter API Key",
+        type="password",
+        placeholder="sk-or-...",
+    )
+
+    # Store in session (do NOT persist)
+    if user_groq_key:
+        st.session_state.user_groq_key = user_groq_key.strip()
+
+    if user_openrouter_key:
+        st.session_state.user_openrouter_key = user_openrouter_key.strip()
+
+    if user_groq_key or user_openrouter_key:
+        st.success("Using your API key for this session")
+    else:
+        st.info("Using demo API keys (free-tier limits apply)")
 
     st.divider()
     st.markdown(
@@ -163,12 +211,12 @@ To avoid file conflicts:
 cleanup_pycache()
 
 tabs = st.tabs(
-    ["🏠 Introduction", "📘 Project Knowledge", "🛠️ Build Application"]
+    ["Introduction", "Project Knowledge", "Build Application"]
 )
 
 # ---------------- INTRO ----------------
 with tabs[0]:
-    st.title("🤖 Your AI Software Engineering Team")
+    st.title("Your AI Software Engineering Team")
 
     st.markdown(
         """
@@ -189,7 +237,7 @@ You describe **what you want to build**, and the team:
 
     st.info(
         """
-📌 **Project Note**
+**Project Note**
 
 Created by **Saksham Jain** for **learning and exploration** of
 multi-agent systems and software workflows.
@@ -198,7 +246,7 @@ This project is **not intended for commercial or monetization use**.
 """
     )
 
-    st.subheader("👥 Meet Your AI Team")
+    st.subheader("Meet Your AI Team")
 
     st.markdown(
         """
@@ -217,7 +265,7 @@ Each agent has **one clear responsibility**, mirroring real teams.
 
 # ---------------- KNOWLEDGE ----------------
 with tabs[1]:
-    st.title("📘 Architecture & Key Decisions")
+    st.title("Architecture & Key Decisions")
 
     with st.expander("Why a Sequential Workflow?", expanded=True):
         st.markdown(
@@ -237,7 +285,7 @@ A sequential pipeline ensures:
 """
         )
 
-    st.subheader("🏗️ Workflow")
+    st.subheader("Workflow")
 
     st.code(
         """
@@ -269,7 +317,7 @@ Workspace + Test Execution
 
 # ---------------- APP ----------------
 with tabs[2]:
-    st.title("🛠️ Build Your Application")
+    st.title("Build Your Application")
 
     st.markdown(
         """
@@ -304,9 +352,16 @@ You do **not** need to specify:
         placeholder="Example: Build a Python module implementing an LRU Cache.",
     )
 
-    if st.button("🚀 Launch AI Team") and user_request.strip():
-        progress_container = st.empty()
-        agent_log_container = st.container()
+    if st.button("Launch AI Team") and user_request.strip():
+        import time
+
+        # ---- initialize timing ----
+        st.session_state.workflow_start_time = time.time()
+
+        # ---- UI placeholders (persistent) ----
+        progress_bar = st.progress(0.0)
+        current_agent_text = st.empty()
+        status_text = st.empty()
 
         AGENT_ORDER = [
             "Controller_agent",
@@ -321,30 +376,52 @@ You do **not** need to specify:
 
         agent_status = {a: "pending" for a in AGENT_ORDER}
 
+        # ---- progress callback (in-place updates only) ----
         def progress_callback(agent_name: str, state: str):
             agent_status[agent_name] = state
 
-            with progress_container:
-                st.subheader("🔄 Live Execution Status")
-
-                for agent in AGENT_ORDER:
-                    status = agent_status[agent]
-                    if status == "completed":
-                        st.success(f"✅ {agent.replace('_', ' ')} completed")
-                    elif status == "running":
-                        st.info(f"⏳ {agent.replace('_', ' ')} running")
-                    else:
-                        st.write(f"• {agent.replace('_', ' ')} pending")
-
-        with st.spinner("AI team is working..."):
-            agents = create_all_agents()
-            result = run_workflow(
-                user_request,
-                agents,
-                progress_callback=progress_callback
+            completed = sum(
+                1 for s in agent_status.values() if s == "completed"
             )
-            st.session_state.workflow_result = result
-            st.rerun()
+            total = len(agent_status)
+
+            progress_bar.progress(completed / total)
+
+            if state == "running":
+                current_agent_text.markdown(
+                    f"### ⏳ Currently running: **{agent_name.replace('_', ' ')}**"
+                )
+            elif state == "completed":
+                current_agent_text.markdown(
+                    f"### ✅ Completed: **{agent_name.replace('_', ' ')}**"
+                )
+
+            lines = []
+            for agent in AGENT_ORDER:
+                s = agent_status[agent]
+                if s == "completed":
+                    lines.append(f"✅ {agent.replace('_', ' ')}")
+                elif s == "running":
+                    lines.append(f"⏳ {agent.replace('_', ' ')}")
+                else:
+                    lines.append(f"• {agent.replace('_', ' ')}")
+
+            status_text.markdown("\n".join(lines))
+
+        # ---- run workflow ----
+        agents = create_all_agents()
+        result = run_workflow(
+            user_request,
+            agents,
+            progress_callback=progress_callback
+        )
+
+        # ---- finalize timing ----
+        st.session_state.workflow_end_time = time.time()
+        st.session_state.workflow_result = result
+
+        st.rerun()
+
             
     if "workflow_result" in st.session_state:
         res = st.session_state.workflow_result
@@ -357,7 +434,7 @@ You do **not** need to specify:
             if is_token_limit_error(msg):
                 st.warning(
                     """
-⚠️ **Free-Tier AI Limit Reached**
+**Free-Tier AI Limit Reached**
 
 This demo runs on **free-tier LLM access**.
 
@@ -372,7 +449,65 @@ You can:
                 st.error(msg)
 
     st.divider()
-    st.header("📂 Generated Project Files")
+    st.header("Generated Project Files")
+    # ---- DOWNLOAD ZIP ----
+    if os.path.exists(WORKSPACE_DIR) and any(Path(WORKSPACE_DIR).rglob("*")):
+        zip_bytes = create_workspace_zip()
+
+        st.download_button(
+            label="⬇️ Download Project as ZIP",
+            data=zip_bytes,
+            file_name="generated_project.zip",
+            mime="application/zip",
+            use_container_width=True,
+        )
+    else:
+        st.info("No files available to download yet.")
+
     display_workspace_artifacts()   
     st.divider()
     launch_generated_ui_section()
+    st.divider()
+    st.header("Launch Options")
+    
+    if os.path.exists(os.path.join(WORKSPACE_DIR, "Dockerfile")):
+        st.subheader("Docker (Recommended)")
+
+        st.markdown(
+            """
+    This is the **recommended way** to run the generated application.
+
+    Requirements:
+    - Docker installed
+    """
+        )
+
+        st.code(
+            """
+    docker build -t generated-app .
+    docker run -p 8501:8501 generated-app
+    """,
+            language="bash",
+        )
+
+
+    st.subheader("Local Python Environment")
+
+    st.markdown(
+        """
+    Run locally using a virtual environment.
+
+    Requirements:
+    - Python 3.9+
+    """
+    )
+
+    st.code(
+        """
+    python -m venv venv
+    source venv/bin/activate  # Windows: venv\\Scripts\\activate
+    pip install -r requirements.txt
+    python main.py
+    """,
+        language="bash",
+    )

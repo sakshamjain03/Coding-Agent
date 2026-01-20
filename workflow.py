@@ -1,3 +1,5 @@
+import re
+import os
 from typing import Dict, Any, Optional, List
 from autogen import GroupChat, GroupChatManager, Agent
 from utils.logger import setup_logger, log_agent_action, log_error_with_context
@@ -20,7 +22,8 @@ class WorkflowOrchestrator:
             "Configuration",
             f"Max review iterations: {max_review_iterations}"
         )
-    
+        
+
     def create_group_chat(self) -> GroupChat:
         agents_list = [
             self.agents["Controller_agent"],
@@ -99,6 +102,7 @@ class WorkflowOrchestrator:
             })
             
             pipeline = [
+                "Controller_agent",
                 "Requirements_Agent",
                 "coding_agent",
                 "review_agent",
@@ -148,8 +152,6 @@ class WorkflowOrchestrator:
             logger.info("WORKFLOW COMPLETED - Extracting generated files...")
             logger.info("=" * 80)
             
-            import re
-            import os
             
             workspace_path = os.path.abspath("workspace")
             os.makedirs(workspace_path, exist_ok=True)
@@ -159,7 +161,7 @@ class WorkflowOrchestrator:
                 content = msg.get("content", "")
                 agent_name = msg.get("role", "assistant")
                 
-                file_pattern = r'===BEGIN_FILE:([^\s]+)===\s*\n(.*?)\n===END_FILE==='
+                file_pattern = r"===BEGIN_FILE\s*:\s*([^\n=]+)===([\s\S]*?)===END_FILE==="
                 matches = re.findall(file_pattern, content, re.DOTALL)
                 
                 for filename, file_content in matches:
@@ -168,7 +170,8 @@ class WorkflowOrchestrator:
                         
                         file_content = file_content.strip()
                         filepath = os.path.join(workspace_path, filename)
-                        with open(filepath, 'w', encoding='utf-8') as f:
+                        os.makedirs(os.path.dirname(filepath), exist_ok=True)
+                        with open(filepath, "w", encoding="utf-8") as f:
                             f.write(file_content)
                         
                         logger.info(f"[{agent_name}] Extracted file: {filename} ({len(file_content)} chars)")

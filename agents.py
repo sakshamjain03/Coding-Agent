@@ -2,8 +2,82 @@ import os
 from typing import Dict, Any
 from autogen import AssistantAgent
 from dotenv import load_dotenv
+import streamlit as st
 
 load_dotenv()
+
+def get_llm_config() -> Dict[str, Any]:
+    config_list = []
+
+    # ---------- 1️⃣ USER-PROVIDED KEYS (HIGHEST PRIORITY) ----------
+    user_groq_key = st.session_state.get("user_groq_key")
+    user_openrouter_key = st.session_state.get("user_openrouter_key")
+
+    groq_model = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
+    or_model = os.getenv(
+        "OPENROUTER_MODEL", "meta-llama/llama-3.2-3b-instruct"
+    )
+
+    if user_groq_key:
+        config_list.append(
+            {
+                "model": groq_model,
+                "api_key": user_groq_key,
+                "base_url": "https://api.groq.com/openai/v1",
+                "api_type": "openai",
+            }
+        )
+
+    if user_openrouter_key:
+        config_list.append(
+            {
+                "model": or_model,
+                "api_key": user_openrouter_key,
+                "base_url": "https://openrouter.ai/api/v1",
+                "api_type": "openai",
+                "default_headers": {
+                    "HTTP-Referer": "http://localhost",
+                    "X-Title": "Saksham",
+                },
+            }
+        )
+
+    # ---------- 2️⃣ FALLBACK: YOUR FREE KEYS ----------
+    groq_keys = os.getenv("GROQ_API_KEYS", "").split(",")
+    for key in filter(None, map(str.strip, groq_keys)):
+        config_list.append(
+            {
+                "model": groq_model,
+                "api_key": key,
+                "base_url": "https://api.groq.com/openai/v1",
+                "api_type": "openai",
+            }
+        )
+
+    or_keys = os.getenv("OPENROUTER_API_KEYS", "").split(",")
+    for key in filter(None, map(str.strip, or_keys)):
+        config_list.append(
+            {
+                "model": or_model,
+                "api_key": key,
+                "base_url": "https://openrouter.ai/api/v1",
+                "api_type": "openai",
+                "default_headers": {
+                    "HTTP-Referer": "http://localhost",
+                    "X-Title": "Saksham",
+                },
+            }
+        )
+
+    if not config_list:
+        raise RuntimeError("No LLM API keys available")
+
+    return {
+        "config_list": config_list,
+        "temperature": 0.7,
+        "timeout": 120,
+    }
+
 
 # def get_llm_config() -> Dict[str, Any]:
 #     return {
@@ -20,6 +94,27 @@ load_dotenv()
 #     }
     
 # def get_llm_config() -> Dict[str, Any]:
+#     api_key = os.getenv("OPENROUTER_API_KEY")
+#     model = os.getenv("OPENROUTER_MODEL", "meta-llama/llama-3.2-3b-instruct")
+
+#     return {
+#         "config_list": [
+#             {
+#                 "model": model,
+#                 "api_key": api_key,
+#                 "base_url": "https://openrouter.ai/api/v1",
+#                 "api_type": "openai",
+#                 "default_headers": {
+#                     "HTTP-Referer": "http://localhost",
+#                     "X-Title": "Saksham"
+#                 }
+#             }
+#         ],
+#         "temperature": 0.7,
+#         "timeout": 120,
+#     }
+
+# def get_llm_config() -> Dict[str, Any]:
 #     return {
 #         "config_list": [
 #             {
@@ -33,26 +128,6 @@ load_dotenv()
 #         "timeout": 120,
 #     }
     
-def get_llm_config() -> Dict[str, Any]:
-    api_key = os.getenv("OPENROUTER_API_KEY")
-    model = os.getenv("OPENROUTER_MODEL", "meta-llama/llama-3.2-3b-instruct")
-
-    return {
-        "config_list": [
-            {
-                "model": model,
-                "api_key": api_key,
-                "base_url": "https://openrouter.ai/api/v1",
-                "api_type": "openai",
-                "default_headers": {
-                    "HTTP-Referer": "http://localhost",
-                    "X-Title": "Saksham"
-                }
-            }
-        ],
-        "temperature": 0.7,
-        "timeout": 120,
-    }
 
 def build_agent(
     name: str,
