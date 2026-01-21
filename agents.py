@@ -5,59 +5,61 @@ from dotenv import load_dotenv
 import streamlit as st
 
 load_dotenv()
-
 def get_llm_config() -> Dict[str, Any]:
     config_list = []
 
-    # ---------- 1️⃣ USER-PROVIDED KEYS (HIGHEST PRIORITY) ----------
+    groq_model = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
+    or_model = os.getenv("OPENROUTER_MODEL", "meta-llama/llama-3.2-3b-instruct")
+
     user_groq_key = st.session_state.get("user_groq_key")
     user_openrouter_key = st.session_state.get("user_openrouter_key")
 
-    groq_model = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
-    or_model = os.getenv(
-        "OPENROUTER_MODEL", "meta-llama/llama-3.2-3b-instruct"
-    )
-
     if user_groq_key:
-        config_list.append(
-            {
-                "model": groq_model,
-                "api_key": user_groq_key,
-                "base_url": "https://api.groq.com/openai/v1",
-                "api_type": "openai",
-            }
-        )
+        config_list.append({
+            "model": groq_model,
+            "api_key": user_groq_key,
+            "base_url": "https://api.groq.com/openai/v1",
+            "api_type": "openai",
+        })
 
     if user_openrouter_key:
-        config_list.append(
-            {
-                "model": or_model,
-                "api_key": user_openrouter_key,
-                "base_url": "https://openrouter.ai/api/v1",
-                "api_type": "openai",
-                "default_headers": {
-                    "HTTP-Referer": "http://localhost",
-                    "X-Title": "Saksham",
-                },
-            }
-        )
+        config_list.append({
+            "model": or_model,
+            "api_key": user_openrouter_key,
+            "base_url": "https://openrouter.ai/api/v1",
+            "api_type": "openai",
+            "default_headers": {
+                "HTTP-Referer": "http://localhost",
+                "X-Title": "Saksham",
+            },
+        })
+        
+    free_groq_keys = []
+    free_or_keys = []
 
-    # ---------- 2️⃣ FALLBACK: YOUR FREE KEYS ----------
-    groq_keys = os.getenv("GROQ_API_KEYS", "").split(",")
-    for key in filter(None, map(str.strip, groq_keys)):
-        config_list.append(
-            {
+    # Load from Streamlit secrets (this is what Streamlit Cloud supports)
+    if "GROQ_API_KEYS" in st.secrets:
+        free_groq_keys += st.secrets["GROQ_API_KEYS"].split(",")
+
+    if "OPENROUTER_API_KEYS" in st.secrets:
+        free_or_keys += st.secrets["OPENROUTER_API_KEYS"].split(",")
+
+    # Also allow ENV variables for local dev
+    free_groq_keys += os.getenv("GROQ_API_KEYS", "").split(",")
+    free_or_keys   += os.getenv("OPENROUTER_API_KEYS", "").split(",")
+
+    for key in map(str.strip, free_groq_keys):
+        if key:
+            config_list.append({
                 "model": groq_model,
                 "api_key": key,
                 "base_url": "https://api.groq.com/openai/v1",
                 "api_type": "openai",
-            }
-        )
+            })
 
-    or_keys = os.getenv("OPENROUTER_API_KEYS", "").split(",")
-    for key in filter(None, map(str.strip, or_keys)):
-        config_list.append(
-            {
+    for key in map(str.strip, free_or_keys):
+        if key:
+            config_list.append({
                 "model": or_model,
                 "api_key": key,
                 "base_url": "https://openrouter.ai/api/v1",
@@ -66,11 +68,13 @@ def get_llm_config() -> Dict[str, Any]:
                     "HTTP-Referer": "http://localhost",
                     "X-Title": "Saksham",
                 },
-            }
-        )
+            })
 
+    # 3️⃣ Final safety
     if not config_list:
-        raise RuntimeError("No LLM API keys available")
+        raise RuntimeError(
+            "No LLM API keys found. Please enter a key or configure Streamlit secrets."
+        )
 
     return {
         "config_list": config_list,
