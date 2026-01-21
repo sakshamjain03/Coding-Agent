@@ -38,15 +38,15 @@ def get_llm_config() -> Dict[str, Any]:
     free_or_keys = []
 
     # Load from Streamlit secrets (this is what Streamlit Cloud supports)
-    if "GROQ_API_KEYS" in st.secrets:
-        free_groq_keys += st.secrets["GROQ_API_KEYS"].split(",")
+    if "GROQ_API_KEY" in st.secrets:
+        free_groq_keys += st.secrets["GROQ_API_KEY"].split(",")
 
-    if "OPENROUTER_API_KEYS" in st.secrets:
-        free_or_keys += st.secrets["OPENROUTER_API_KEYS"].split(",")
+    if "OPENROUTER_API_KEY" in st.secrets:
+        free_or_keys += st.secrets["OPENROUTER_API_KEY"].split(",")
 
     # Also allow ENV variables for local dev
-    free_groq_keys += os.getenv("GROQ_API_KEYS", "").split(",")
-    free_or_keys   += os.getenv("OPENROUTER_API_KEYS", "").split(",")
+    free_groq_keys += os.getenv("GROQ_API_KEY", "").split(",")
+    free_or_keys   += os.getenv("OPENROUTER_API_KEY", "").split(",")
 
     for key in map(str.strip, free_groq_keys):
         if key:
